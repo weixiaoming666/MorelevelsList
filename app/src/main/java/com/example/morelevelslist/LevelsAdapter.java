@@ -33,9 +33,10 @@ public class LevelsAdapter extends RecyclerView.Adapter {
 
 
     public LevelsAdapter(List<NodeEntity> datas, Context context) {
+//        -通過LinkedHashMap持有数据并且通过和 List<NodeEntity> datas的交互保持数据的实时更新
         for (int i = 0; i < datas.size(); i++) {
-            if (datas.get(i).isShow){
-                datas.get(i).position =  this.datas.size();
+            if (datas.get(i).isShow) {
+                datas.get(i).position = this.datas.size();
                 this.datas.add(datas.get(i));
             }
             map.put(datas.get(i).sequence, datas.get(i));
@@ -72,7 +73,7 @@ public class LevelsAdapter extends RecyclerView.Adapter {
                 initViewNode((ViewHolderNode) holder, datas.get(position));
                 break;
             case 1:
-                initViewOne((ViewHolderItemOne) holder, datas.get(position),position);
+                initViewOne((ViewHolderItemOne) holder, datas.get(position), position);
                 break;
         }
     }
@@ -82,17 +83,17 @@ public class LevelsAdapter extends RecyclerView.Adapter {
     }
 
     /**
-    * 显示  显示样式1
-    * */
+     * 显示  显示样式1
+     */
     private void initViewOne(ViewHolderItemOne holder, NodeEntity nodeEntity, int position) {
         holder.tvTitle.setText(nodeEntity.title);
-        holder.etInput.setHint("请输入："+nodeEntity.sequence);
+        holder.etInput.setHint("请输入：" + nodeEntity.sequence);
         holder.itemView.setBackgroundColor(context.getColor(R.color.red_DD0404));
         MyTextWatcher myTextWatcher;
-        if (  holder.etInput.getTag() == null){
-             myTextWatcher   = new MyTextWatcher(position);
+        if (holder.etInput.getTag() == null) {
+            myTextWatcher = new MyTextWatcher(position);
             holder.etInput.setTag(myTextWatcher);
-        }else {
+        } else {
             myTextWatcher = (MyTextWatcher) holder.etInput.getTag();
             myTextWatcher.upIndex(position);
         }
@@ -103,29 +104,30 @@ public class LevelsAdapter extends RecyclerView.Adapter {
     }
 
     /**
-    * 显示节点内容
-    * */
-    private boolean setChecked = true;
+     * 显示节点内容
+     */
+    private boolean setChecked = true;//设置数据时不走监听
+
     @RequiresApi(api = Build.VERSION_CODES.M)
     private void initViewNode(ViewHolderNode holder, NodeEntity nodeEntity) {
-        String[] length =  nodeEntity.sequence.split("\\.");
-        switch (length.length){
+        String[] length = nodeEntity.sequence.split("\\.");
+        switch (length.length) {
             case 1:
                 holder.itemView.setBackgroundColor(context.getColor(R.color.white));
-                showTree(holder,length.length);
+                showTree(holder, length.length);
                 break;
             case 2:
                 holder.itemView.setBackgroundColor(context.getColor(R.color.teal_200));
-                showTree(holder,length.length);
+                showTree(holder, length.length);
                 break;
 
             case 3:
-                showTree(holder,length.length);
+                showTree(holder, length.length);
                 holder.itemView.setBackgroundColor(context.getColor(R.color.purple_200));
                 break;
 
             case 4:
-                showTree(holder,length.length);
+                showTree(holder, length.length);
                 holder.itemView.setBackgroundColor(context.getColor(R.color.teal_700));
                 break;
 
@@ -160,9 +162,10 @@ public class LevelsAdapter extends RecyclerView.Adapter {
         holder.cb.setChecked(nodeEntity.isOpen);
         setChecked = false;
     }
+//     这里其实处理的话直接用根据具体的ui个和层级使用横向滑动的RecyclerView或者listview去处理更简洁（节点层级很多的清空下）
 
     private void showTree(ViewHolderNode holder, int length) {
-        switch (length){
+        switch (length) {
             case 1:
                 holder.iv1.setVisibility(View.VISIBLE);
                 holder.iv2.setVisibility(View.GONE);
@@ -215,18 +218,20 @@ public class LevelsAdapter extends RecyclerView.Adapter {
     public int getItemCount() {
         return datas.size();
     }
-/**
-* 获取提交数据
-*
- * @param rlv*/
-    public  List<NodeEntity> getDatas(RecyclerView rlv) {
-        List<NodeEntity> datasTem = new ArrayList<>();
-        for (NodeEntity nodeEntity: map.values()) {
-             if (nodeEntity.viewType == 1 && TextUtils.isEmpty(nodeEntity.content)){
-                 Toast.makeText(context,nodeEntity.title+"内容必须填写",Toast.LENGTH_SHORT).show();
-                jumpToPosition(nodeEntity,rlv);
+
+    /**
+     * 获取提交数据
+     *
+     * @param rlv
+     */
+    public List<NodeEntity> getDatas(RecyclerView rlv) {
+        List<NodeEntity> datasTem = new ArrayList<>();//这里不能直接用datas因为他实际在被持有且使用
+        for (NodeEntity nodeEntity : map.values()) {
+            if (nodeEntity.viewType == 1 && TextUtils.isEmpty(nodeEntity.content)) {
+                Toast.makeText(context, nodeEntity.title + "内容必须填写", Toast.LENGTH_SHORT).show();
+                jumpToPosition(nodeEntity, rlv);
                 return null;
-             }
+            }
             datasTem.add(nodeEntity);
         }
         datas.clear();
@@ -236,15 +241,15 @@ public class LevelsAdapter extends RecyclerView.Adapter {
     }
 
     /**
-    * 跳转到待处理的位置（显示中或者未显示）
-    * */
+     * 跳转到待处理的位置（显示中或者未显示）
+     */
     private void jumpToPosition(NodeEntity nodeEntity, RecyclerView rlv) {
-        if (nodeEntity.isShow){
+        if (nodeEntity.isShow) {
             rlv.scrollToPosition(nodeEntity.position);
-        }else {
+        } else {
             nodeEntity.isShow = true;
             for (NodeEntity entity : map.values()) {
-                if (nodeEntity.sequence.startsWith(entity.sequence)||(nodeEntity.sequence.startsWith(entity.parentId))) {
+                if (nodeEntity.sequence.startsWith(entity.sequence) || (nodeEntity.sequence.startsWith(entity.parentId))) {
                     entity.isShow = true;
                     entity.isOpen = true;
                 }
@@ -290,6 +295,7 @@ public class LevelsAdapter extends RecyclerView.Adapter {
     class ViewHolderItemOne extends RecyclerView.ViewHolder {
         private AppCompatTextView tvTitle;
         private EditText etInput;
+
         public ViewHolderItemOne(@NonNull View itemView) {
             super(itemView);
             tvTitle = (AppCompatTextView) itemView.findViewById(R.id.tv_title);
@@ -300,9 +306,9 @@ public class LevelsAdapter extends RecyclerView.Adapter {
 
     /**
      * 自定义的字体监听  防止et数据混乱
-    *
-    * */
+     */
     private boolean isSetEt = false;
+
     public class MyTextWatcher implements TextWatcher {
         private int index = -1;  //位置
         private int type = -1;  //赋值类型
@@ -310,9 +316,11 @@ public class LevelsAdapter extends RecyclerView.Adapter {
         public MyTextWatcher(int position) {
             index = position;
         }
-        public void  upIndex(int position){
+
+        public void upIndex(int position) {
             index = position;
         }
+
         @Override
         public void beforeTextChanged(CharSequence s, int start, int count, int after) {
 
@@ -325,7 +333,7 @@ public class LevelsAdapter extends RecyclerView.Adapter {
 
         @Override
         public void afterTextChanged(Editable s) {
-            if (isSetEt)return;
+            if (isSetEt) return;
             datas.get(index).content = s.toString();
         }
     }
