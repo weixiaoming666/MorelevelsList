@@ -5,6 +5,7 @@ import android.os.Build;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,12 +13,10 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
-import androidx.appcompat.widget.AppCompatCheckBox;
 import androidx.appcompat.widget.AppCompatTextView;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -26,23 +25,16 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-public class LevelsAdapter extends RecyclerView.Adapter   {
+public class LevelsAdapter2 extends RecyclerView.Adapter  implements ItemTouchHelperAdapter {
     List<NodeEntity> datas = new ArrayList<>();
     LayoutInflater layoutInflater;
     Context context;
     private LinkedHashMap<String, NodeEntity> map = new LinkedHashMap();//顺序的map来处理数据的变化
 
 
-    public LevelsAdapter(List<NodeEntity> datas, Context context) {
+    public LevelsAdapter2(List<NodeEntity> datas, Context context) {
 //        -通過LinkedHashMap持有数据并且通过和 List<NodeEntity> datas的交互保持数据的实时更新
-        for (int i = 0; i < datas.size(); i++) {
-            if (datas.get(i).isShow) {
-                datas.get(i).position = this.datas.size();
-                this.datas.add(datas.get(i));
-            }
-            map.put(datas.get(i).sequence, datas.get(i));
-
-        }
+       this.datas = datas;
         this.context = context;
         layoutInflater = LayoutInflater.from(context);
     }
@@ -55,31 +47,32 @@ public class LevelsAdapter extends RecyclerView.Adapter   {
 //            节点
             case -1:
                 View view = layoutInflater.inflate(R.layout.item_node, null);
-                holder = new ViewHolderNode(view);
+                holder = new LevelsAdapter2.ViewHolderNode(view);
                 break;
 //               子节点样式1
             case 1:
                 View view1 = layoutInflater.inflate(R.layout.item_one, null);
-                holder = new ViewHolderItemOne(view1);
+                holder = new LevelsAdapter2.ViewHolderItemOne(view1);
                 break;
         }
         return holder;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
 
         switch (getItemViewType(position)) {
             case -1:
-                initViewNode((ViewHolderNode) holder, datas.get(position));
+                initViewNode((LevelsAdapter2.ViewHolderNode) holder, datas.get(position));
                 break;
             case 1:
-                initViewOne((ViewHolderItemOne) holder, datas.get(position), position);
+                initViewOne((LevelsAdapter2.ViewHolderItemOne) holder, datas.get(position), position);
                 break;
         }
     }
 
-    public LevelsAdapter(List<NodeEntity> datas) {
+    public LevelsAdapter2(List<NodeEntity> datas) {
         this.datas = datas;
     }
 
@@ -87,16 +80,16 @@ public class LevelsAdapter extends RecyclerView.Adapter   {
      * 显示  显示样式1
      */
     @RequiresApi(api = Build.VERSION_CODES.M)
-    private void initViewOne(ViewHolderItemOne holder, NodeEntity nodeEntity, int position) {
+    private void initViewOne(LevelsAdapter2.ViewHolderItemOne holder, NodeEntity nodeEntity, int position) {
         holder.tvTitle.setText(nodeEntity.title);
         holder.etInput.setHint("请输入：" + nodeEntity.sequence);
         holder.itemView.setBackgroundColor(context.getColor(R.color.red_DD0404));
-        MyTextWatcher myTextWatcher;
+        LevelsAdapter2.MyTextWatcher myTextWatcher;
         if (holder.etInput.getTag() == null) {
-            myTextWatcher = new MyTextWatcher(position);
+            myTextWatcher = new LevelsAdapter2.MyTextWatcher(position);
             holder.etInput.setTag(myTextWatcher);
         } else {
-            myTextWatcher = (MyTextWatcher) holder.etInput.getTag();
+            myTextWatcher = (LevelsAdapter2.MyTextWatcher) holder.etInput.getTag();
             myTextWatcher.upIndex(position);
         }
         holder.etInput.addTextChangedListener(myTextWatcher);
@@ -111,7 +104,7 @@ public class LevelsAdapter extends RecyclerView.Adapter   {
     private boolean setChecked = true;//设置数据时不走监听
 
     @RequiresApi(api = Build.VERSION_CODES.M)
-    private void initViewNode(ViewHolderNode holder, NodeEntity nodeEntity) {
+    private void initViewNode(LevelsAdapter2.ViewHolderNode holder, NodeEntity nodeEntity) {
         String[] length = nodeEntity.sequence.split("\\.");
         switch (length.length) {
             case 1:
@@ -166,7 +159,7 @@ public class LevelsAdapter extends RecyclerView.Adapter   {
     }
 //     这里其实处理的话直接用根据具体的ui个和层级使用横向滑动的RecyclerView或者listview去处理更简洁（节点层级很多的清空下）
 
-    private void showTree(ViewHolderNode holder, int length) {
+    private void showTree(LevelsAdapter2.ViewHolderNode holder, int length) {
         switch (length) {
             case 1:
                 holder.iv1.setVisibility(View.VISIBLE);
@@ -262,7 +255,117 @@ public class LevelsAdapter extends RecyclerView.Adapter   {
 
     }
 
+    //    滑动处理
+    @Override
+    public void onItemMove(RecyclerView.ViewHolder source, RecyclerView.ViewHolder target) {
+        int fromPosition = source.getAdapterPosition();//来自位置
+        int toPosition = target.getAdapterPosition();
+        if (datas.get(fromPosition).parentId.equals("-1")){//分组
+            if (datas.get(toPosition).parentId.equals("-1")){//分组只能跟分组进行位置互换
+                Collections.swap(datas, fromPosition, toPosition);
+                notifyItemMoved(fromPosition, toPosition);
 
+                //                需要处理的就是这个节点之间的数据互换了；
+
+                List<NodeEntity> toPositionDatas = new ArrayList<>();//点击的分组下的数据
+                List<NodeEntity> fromPositionDatas = new ArrayList<>();//获取的分组下的数据
+                NodeEntity toPositionNode = datas.get(fromPosition);//点击分组的数据
+                NodeEntity fromPositionsNode = datas.get(toPosition);//交换分组的数据
+                Log.d("排序后的数据", datas.toString());
+                for (int i = 0; i < datas.size(); i++) {
+//                    移动后的位置
+                    if (datas.get(i).parentId.equals(toPositionNode.sequence)){
+                        toPositionDatas.add(datas.get(i));
+                        datas.remove(datas.get(i));
+                        i--;
+                    }
+                    if (datas.get(i).parentId.equals(fromPositionsNode.sequence)){
+                        fromPositionDatas.add(datas.get(i));
+                        datas.remove(datas.get(i));
+                        i--;
+                    }
+                }
+                datas.addAll(datas.indexOf(toPositionNode)+1,toPositionDatas);
+                datas.addAll(datas.indexOf(fromPositionsNode)+1,fromPositionDatas);
+                Log.d("排序后的数据2", datas.toString());
+                if (fromPosition>toPosition){
+                    notifyItemRangeChanged(toPosition+1,toPositionDatas.size()+fromPositionDatas.size()+1);
+                }else {
+                    notifyItemRangeChanged(fromPosition,toPositionDatas.size()+fromPositionDatas.size()+1);
+
+                }
+                onItemClear(source);
+            }
+
+        }else {//单体
+            if (fromPosition < datas.size() && toPosition < datas.size()&&toPosition!=0) {
+                //交换数据位置
+                Collections.swap(datas, fromPosition, toPosition);
+                if (datas.get(toPosition-1).parentId.equals("-1")){
+                    datas.get(toPosition).parentId = datas.get(toPosition-1).sequence;//官服父id的获取;
+                }else {
+                    datas.get(toPosition).parentId = datas.get(toPosition-1).parentId;//官服父id的获取;
+                }
+
+                //刷新位置交换
+                notifyItemMoved(fromPosition, toPosition);
+            }
+            onItemClear(source);
+        }
+
+
+
+        //移动过程中移除view的放大效果
+        Log.d("排序后的数据", datas.toString());
+        Log.d("排序后的数据：", "fromPosition:" +fromPosition+"****TO***"+"toPosition:"+toPosition);
+
+    }
+
+    @Override
+    public void onItemDissmiss(RecyclerView.ViewHolder source) {
+        int position = source.getAdapterPosition();
+        datas.remove(position); //移除数据
+        notifyItemRemoved(position);//刷新数据移除
+        Log.d("排序后的数据：", "onItemDissmiss");
+    }
+
+    @Override
+    public void onItemSelect(RecyclerView.ViewHolder source, int actionState) {
+        //当拖拽选中时放大选中的view
+        if (actionState == 0){
+//            source.itemView.setScaleX(1.0f);
+//            source.itemView.setScaleY(1.0f);
+        }else if (actionState == 2){
+            source.itemView.setScaleX(0.9f);
+            source.itemView.setScaleY(0.9f);
+        }
+
+    }
+
+    @Override
+    public void onItemClear(RecyclerView.ViewHolder source) {
+//拖拽结束后恢复view的状态
+        source.itemView.setScaleX(1.0f);
+            source.itemView.setScaleY(1.0f);
+        Log.d("排序后的数据：", "清除");
+
+    }
+
+    @Override
+    public boolean canDropOver(int fromPosition, int toPosition) {
+        if (datas.get(fromPosition).parentId.equals("-1")){//分组
+            if (datas.get(toPosition).parentId.equals("-1")){//分组只能跟分组进行位置互换
+                return true;
+
+            }
+        }else {
+            if (fromPosition < datas.size() && toPosition < datas.size()&&toPosition!=0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /**
      * 打开节点

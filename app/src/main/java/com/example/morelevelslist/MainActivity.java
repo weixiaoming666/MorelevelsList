@@ -1,9 +1,11 @@
 package com.example.morelevelslist;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -98,22 +100,29 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         rlv.setAdapter(adapter = new LevelsAdapter(datas, this));
-
+//        ItemTouchHelper.Callback callback = new SimpleItemTouchHelperCallback(adapter);
+//        ItemTouchHelper touchHelper = new ItemTouchHelper(callback);
+        //调用ItemTouchHelper的attachToRecyclerView方法建立联系
+//        touchHelper.attachToRecyclerView(rlv);
     }
 
 
     private void initView() {
         rlv = (RecyclerView) findViewById(R.id.rlv);
         rlv.setLayoutManager(new LinearLayoutManager(this));
+
     }
 
     /**
      * 提交操作；处理未填写数据的地方
      */
     public void sumbit(View view) {
-        if (adapter != null) {
+
+        startActivity(new Intent(this,MainActivity2.class));
+
+      /*  if (adapter != null) {
             adapter.getDatas(rlv);
-        }
+        }*/
 
     }
 }
